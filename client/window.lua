@@ -8,6 +8,8 @@ local peekGroup = GetRandomIntInRange(0, 0xffffff)
 local peekEndGroup = GetRandomIntInRange(0, 0xffffff)
 print('peekGroup: ' .. peekGroup)
 print('peekEndGroup: ' .. peekEndGroup)
+local peekPrompt = false
+local peekEndPrompt = false
 local peekGroupName = 'Window'
 local isPeeking = false
 local isPeekStarting = false
@@ -48,15 +50,15 @@ Citizen.CreateThread(function()
                     end
                     TxtAtWorldCoord(pCoords.x, pCoords.y, pCoords.z, str, 0.2, 1)
                 end
-                Citizen.InvokeNative(0xC65A45D4453C2627, peekGroup, peekGroupName)
+                PromptSetActiveGroupThisFrame(peekGroup, peekGroupName)
             end
         end
 
         if isPeeking and not isPeekStarting then
-            Citizen.InvokeNative(0xC65A45D4453C2627, peekEndGroup, peekGroupName)
+            PromptSetActiveGroupThisFrame(peekEndGroup, peekGroupName)
         end
 
-        if Citizen.InvokeNative(0xE0F65F0640EF0617, peekPrompt) then -- _UIPROMPT_HAS_HOLD_MODE_COMPLETED
+        if PromptHasHoldModeCompleted(peekPrompt) then
             isPeeking = true
             isPeekStarting = true
             local eHeading = GetEntityHeading(entityHit)
@@ -71,7 +73,7 @@ Citizen.CreateThread(function()
             Citizen.Wait(2250)
             isPeekStarting = false
         end
-        if Citizen.InvokeNative(0xC92AC953F0A982AE, peekEndPrompt) then -- _UIPROMPT_HAS_STANDARD_MODE_COMPLETED
+        if PromptHasStandardModeCompleted(peekEndPrompt) then
             isPeeking = false
             isPeekEnding = true
             ClearPedTasks(player)
@@ -82,41 +84,46 @@ Citizen.CreateThread(function()
 end)
 
 function SetupPeekPrompt()
-    if not Citizen.InvokeNative(0x347469FBDD1589A9, peekPrompt) then -- _UIPROMPT_IS_VALID
+    if not PromptIsValid(peekPrompt) then
         Citizen.CreateThread(function()
-            local str = CreateVarString(10, 'LITERAL_STRING', 'Peek')
-            peekPrompt = Citizen.InvokeNative(0x29FA7910726C3889, 0xCEFD9220, str, 6, 1, 1, -1) -- _UIPROMPT_CREATE
-            print('Created peekPrompt: ' .. peekPrompt)
+            local str = 'Peek'
+            peekPrompt = PromptRegisterBegin()
+            PromptSetControlAction(peekPrompt, 0xCEFD9220)
             if Config.Debug == 1 then
-                str = CreateVarString(10, 'LITERAL_STRING', peekPrompt .. ' : Peek')
-                Citizen.InvokeNative(0x5DD02A8318420DD7, peekPrompt, str)
+                str = peekPrompt .. ' : ' .. str
             end
-            Citizen.InvokeNative(0x8A0FB4D03A630D21, peekPrompt, 1) -- _UIPROMPT_SET_ENABLED
-            Citizen.InvokeNative(0x71215ACCFDE075EE, peekPrompt, 1) -- _UIPROMPT_SET_VISIBLE
-            Citizen.InvokeNative(0x94073D5CA3F16B7B, peekPrompt, 1) -- _UIPROMPT_SET_HOLD_MODE -- Get Hold Mode with 0xB60C9F9ED47ABB76
-            -- Citizen.InvokeNative(0x560E76D5E2E1803F, peekPrompt, 24, true) -- _UIPROMPT_SET_ATTRIBUTE
-            -- Citizen.InvokeNative(0xD9459157EB22C895) -- Set Prompts to Horizontal ... Not sure how to turn back vertical after calling this.
+            str = CreateVarString(10, 'LITERAL_STRING', str)
+            PromptSetText(peekPrompt, str)
+            PromptSetEnabled(peekPrompt, 1)
+            PromptSetVisible(peekPrompt, 1)
+            PromptSetHoldMode(peekPrompt, 1)
+            -- PromptSetAttribute(peekPrompt, 24, true)
 
-            Citizen.InvokeNative(0x2F11D3A254169EA4, peekPrompt, peekGroup) -- _UIPROMPT_SET_GROUP
+            PromptSetGroup(peekPrompt, peekGroup)
+            PromptRegisterEnd(peekPrompt)
+
+            print('Created peekPrompt: ' .. peekPrompt)
         end)
     end
 end
 
 function SetupPeekEndPrompt()
-    if not Citizen.InvokeNative(0x347469FBDD1589A9, peekEndPrompt) then -- _UIPROMPT_IS_VALID
-        local str = CreateVarString(10, 'LITERAL_STRING', 'Leave')
-        peekEndPrompt = Citizen.InvokeNative(0x29FA7910726C3889, 0xB2F377E8, str, 6, 1, 1, -1) -- _UIPROMPT_CREATE
-        print('Created peekEndPrompt: ' .. peekEndPrompt)
+    if not PromptIsValid(peekEndPrompt) then
+        local str = 'Leave'
+        peekEndPrompt = PromptRegisterBegin()
+        PromptSetControlAction(peekEndPrompt, 0xB2F377E8)
         if Config.Debug == 1 then
-            str = CreateVarString(10, 'LITERAL_STRING', peekEndPrompt .. ' : Leave')
-            Citizen.InvokeNative(0x5DD02A8318420DD7, peekEndPrompt, str)
+            str = peekEndPrompt .. ' : ' .. str
         end
-        Citizen.InvokeNative(0x8A0FB4D03A630D21, peekEndPrompt, 1) -- _UIPROMPT_SET_ENABLED
-        Citizen.InvokeNative(0x71215ACCFDE075EE, peekEndPrompt, 1) -- _UIPROMPT_SET_VISIBLE
-        Citizen.InvokeNative(0xCC6656799977741B, peekEndPrompt, 1) -- _UIPROMPT_SET_STANDARD_MODE
-        -- Citizen.InvokeNative(0x560E76D5E2E1803F, peekEndPrompt, 24, true) -- _UIPROMPT_SET_ATTRIBUTE
-        -- Citizen.InvokeNative(0xD9459157EB22C895) -- Set Prompts to Horizontal ... Not sure how to turn back vertical after calling this.
+        str = CreateVarString(10, 'LITERAL_STRING', str)
+        PromptSetText(peekEndPrompt, str)
+        PromptSetEnabled(peekEndPrompt, 1)
+        PromptSetVisible(peekEndPrompt, 1)
+        PromptSetStandardMode(peekEndPrompt, 1)
 
-        Citizen.InvokeNative(0x2F11D3A254169EA4, peekEndPrompt, peekEndGroup) -- _UIPROMPT_SET_GROUP
+        PromptSetGroup(peekEndPrompt, peekEndGroup)
+        PromptRegisterEnd(peekEndPrompt)
+
+        print('Created peekEndPrompt: ' .. peekEndPrompt)
     end
 end
