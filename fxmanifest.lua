@@ -5,4 +5,5 @@ client_scripts {
     'config.lua',
     'client/functions.lua',
     'client/window.lua',
+    'client/job_examples.lua',
 }
